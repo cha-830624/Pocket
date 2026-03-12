@@ -3,7 +3,6 @@ import { Plus, ArrowUpCircle, ArrowDownCircle, X, Edit3, Trash2, Loader2, Databa
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import {
   debtData as initialDebtData,
-  debtHistory,
   formatCurrency,
 } from '../data/dummyData'
 import {
@@ -123,6 +122,16 @@ function Debt() {
   const totalBorrowed = dataList.filter(d => d.type === 'borrow').reduce((sum, d) => sum + d.amount, 0)
   const totalRepaid = dataList.filter(d => d.type === 'repay').reduce((sum, d) => sum + d.amount, 0)
   const repaymentRate = totalBorrowed > 0 ? (totalRepaid / totalBorrowed) * 100 : 0
+
+  // 거래건별 누적 잔액으로 차트 데이터 생성
+  const chartData = [...dataList]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .reduce((acc, item) => {
+      const prev = acc.length > 0 ? acc[acc.length - 1].balance : 0
+      const balance = item.type === 'borrow' ? prev + item.amount : prev - item.amount
+      acc.push({ label: item.date.slice(5).replace('-', '/'), balance })
+      return acc
+    }, [])
 
   // 추가 팝업 열기
   const openAddModal = () => {
@@ -375,14 +384,14 @@ function Debt() {
             <div className="card-body" style={{ padding: '8px 12px' }}>
               <div className="chart-mini">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={debtHistory}>
+                  <AreaChart data={chartData}>
                     <defs>
                       <linearGradient id="debtGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#F43F5E" stopOpacity={0.3}/>
                         <stop offset="100%" stopColor="#F43F5E" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 9 }} />
+                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 9 }} />
                     <Tooltip content={<MiniTooltip />} />
                     <Area type="monotone" dataKey="balance" stroke="#F43F5E" strokeWidth={1.5} fill="url(#debtGrad)" />
                   </AreaChart>
