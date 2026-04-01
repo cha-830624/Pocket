@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Plus, ArrowUpCircle, ArrowDownCircle, X, Edit3, Trash2, Loader2, Database } from 'lucide-react'
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import {
   debtData as initialDebtData,
   formatCurrency,
@@ -123,15 +123,29 @@ function Debt() {
   const totalRepaid = dataList.filter(d => d.type === 'repay').reduce((sum, d) => sum + d.amount, 0)
   const repaymentRate = totalBorrowed > 0 ? (totalRepaid / totalBorrowed) * 100 : 0
 
-  // 거래건별 누적 잔액으로 차트 데이터 생성
-  const chartData = [...dataList]
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .reduce((acc, item) => {
-      const prev = acc.length > 0 ? acc[acc.length - 1].balance : 0
-      const balance = item.type === 'borrow' ? prev + item.amount : prev - item.amount
-      acc.push({ label: item.date.slice(5).replace('-', '/'), balance })
-      return acc
-    }, [])
+  // 잔액 추이 차트 데이터 (일별, 최근 20건)
+  const chartData = useMemo(() => {
+    const sorted = [...dataList].sort((a, b) => a.date.localeCompare(b.date))
+    let runningBalance = 0
+    
+    const all = sorted.map(item => {
+      runningBalance += (item.type === 'borrow' ? item.amount : -item.amount)
+      return {
+        date: item.date.slice(5).replace('-', '/'),
+        balance: runningBalance
+      }
+    })
+    
+    return all.slice(-20)
+  }, [dataList])
+
+  // 금액 축약 포맷
+  const formatShort = (value) => {
+    const abs = Math.abs(value)
+    if (abs >= 100000000) return `${(value / 100000000).toFixed(1)}억`
+    if (abs >= 10000) return `${Math.round(value / 10000)}만`
+    return value.toLocaleString()
+  }
 
   // 추가 팝업 열기
   const openAddModal = () => {
@@ -273,25 +287,6 @@ function Debt() {
     return `${payoffDate.getFullYear()}년 ${payoffDate.getMonth() + 1}월`
   }
 
-  const MiniTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div style={{
-          background: 'white',
-          border: '1px solid #E2E8F0',
-          borderRadius: '4px',
-          padding: '4px 8px',
-          fontSize: '0.7rem',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ color: '#94A3B8' }}>{label}</div>
-          <div style={{ color: '#F43F5E', fontWeight: '600' }}>{formatCurrency(payload[0].value)}</div>
-        </div>
-      )
-    }
-    return null
-  }
-
   // 로딩 중 표시
   if (isLoading) {
     return (
@@ -375,54 +370,55 @@ function Debt() {
 
       {/* 콘텐츠 영역 */}
       <div className="content-area">
-        {/* 차트 + 요약 */}
-        <div className="grid-2">
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">잔액 추이</h3>
-            </div>
-            <div className="card-body" style={{ padding: '8px 12px' }}>
-              <div className="chart-mini">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="debtGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#F43F5E" stopOpacity={0.3}/>
-                        <stop offset="100%" stopColor="#F43F5E" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 9 }} />
-                    <Tooltip content={<MiniTooltip />} />
-                    <Area type="monotone" dataKey="balance" stroke="#F43F5E" strokeWidth={1.5} fill="url(#debtGrad)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+        {/* 잔액 추이 - 그라디언트 영역 차트 */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">부채 잔액 추이</h3>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+              최근 {chartData.length}건
+            </span>
           </div>
-
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">요약</h3>
-            </div>
-            <div className="card-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>대출 횟수</span>
-                  <span style={{ fontWeight: '600', fontSize: '0.8rem' }}>{dataList.filter(d => d.type === 'borrow').length}회</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>상환 횟수</span>
-                  <span style={{ fontWeight: '600', fontSize: '0.8rem' }}>{dataList.filter(d => d.type === 'repay').length}회</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>월평균 상환</span>
-                  <span style={{ fontWeight: '600', fontSize: '0.8rem', color: 'var(--income)' }}>{formatCurrency(avgRepayment)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>예상 완납일</span>
-                  <span style={{ fontWeight: '600', fontSize: '0.8rem', color: 'var(--accent)' }}>{getExpectedPayoffDate()}</span>
-                </div>
-              </div>
+          <div className="card-body" style={{ padding: '8px 12px' }}>
+            <div style={{ height: '220px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="debtGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F43F5E" stopOpacity={0.4}/>
+                      <stop offset="50%" stopColor="#F43F5E" stopOpacity={0.15}/>
+                      <stop offset="100%" stopColor="#F43F5E" stopOpacity={0.02}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis 
+                    dataKey="date" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: 'var(--text-muted)', fontSize: 9 }} 
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: 'var(--text-muted)', fontSize: 9 }}
+                    tickFormatter={formatShort}
+                    width={50}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="balance" 
+                    stroke="#F43F5E" 
+                    strokeWidth={2.5} 
+                    fill="url(#debtGradient)"
+                    dot={{ r: 4, fill: '#F43F5E', stroke: '#fff', strokeWidth: 2 }}
+                    activeDot={{ r: 6, fill: '#F43F5E', stroke: '#fff', strokeWidth: 2 }}
+                    label={{
+                      position: 'top',
+                      formatter: formatShort,
+                      style: { fontSize: '0.6rem', fill: 'var(--text-muted)', fontWeight: '500' },
+                      offset: 8
+                    }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
