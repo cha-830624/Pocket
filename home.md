@@ -7,7 +7,7 @@
 > - [x] Node.js 설치 ✅ (v22.16.0)
 > - [x] GitHub 계정 설정 ✅ (chajunghun83)
 > - [x] **GitHub 저장소 생성 완료** ✅
->   - URL: https://github.com/chajunghun83/Pocket
+>   - URL: https://github.com/cha-830624/Pocket
 > - [x] **Supabase 프로젝트 생성 완료** ✅
 >   - Project URL: https://gzxbckioutctwxbevqmk.supabase.co
 > - [x] **`.env` 파일 생성 완료** ✅
@@ -158,7 +158,7 @@ git config --global user.email
 cd D:\work
 
 # GitHub에서 프로젝트 복사
-git clone https://github.com/chajunghun83/Pocket.git
+git clone https://github.com/cha-830624/Pocket.git
 
 # 프로젝트 폴더로 이동
 cd Pocket

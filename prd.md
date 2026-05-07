@@ -849,7 +849,7 @@ git config --global user.email
 - [ ] `.env` 파일 생성
 
 #### ✅ 프로젝트 시작
-- [x] GitHub 저장소 생성 ✅ (https://github.com/chajunghun83/Pocket)
+- [x] GitHub 저장소 생성 ✅ (https://github.com/cha-830624/Pocket)
 - [x] 로컬 Git 저장소 초기화 ✅
 - [x] PRD 및 문서 GitHub 업로드 ✅
 - [x] Supabase 프로젝트 생성 ✅ (https://gzxbckioutctwxbevqmk.supabase.co)

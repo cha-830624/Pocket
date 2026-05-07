@@ -235,7 +235,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJI...
 |------|------|
 | 호스팅 | Vercel (이전: Netlify) |
 | URL | https://pocket-silk.vercel.app |
-| GitHub | https://github.com/chajunghun83/Pocket |
+| GitHub | https://github.com/cha-830624/Pocket |
 | 자동 배포 | `git push` → 자동 빌드/배포 (CI/CD)
 | Functions | Vercel Functions (Yahoo Finance 프록시)
 
@@ -405,7 +405,7 @@ git push
 ## 📞 도움이 필요하면
 
 - **라이브 사이트**: https://pocket-silk.vercel.app
-- **GitHub 저장소**: https://github.com/chajunghun83/Pocket
+- **GitHub 저장소**: https://github.com/cha-830624/Pocket
 - **Supabase 프로젝트**: https://gzxbckioutctwxbevqmk.supabase.co
 - **Vercel 대시보드**: https://vercel.com/cha-projects/pocket
 
