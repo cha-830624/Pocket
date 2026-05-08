@@ -63,3 +63,18 @@
 - chore: GitHub 저장소 URL 변경 (`chajunghun83/Pocket` → `cha-830624/Pocket`), 문서·git remote 갱신
 - docs: CLAUDE.md 신규 작성, Git 작업 규칙(명시 요청 시에만 커밋·푸시, 커밋 시 History.md 갱신) 추가
 - docs: docs/History.md 신설, 과거 개발 이력 요약 정리
+
+### 2026-05-08
+- security: Supabase RLS 정책을 `auth.uid() = user_id` 기반으로 강화, user_id DEFAULT 추가
+- security: env-template.txt의 실제 Supabase URL·anon key를 placeholder로 교체
+- security: Yahoo 프록시(api/yahoo-finance.js) symbol/interval/range 화이트리스트 검증 + origin 화이트리스트 적용
+- fix: backupService 주식 복구 시 컬럼 매핑 오류(name/code/broker/memo/sort_order) 수정
+- fix: Dashboard 1분 폴링이 stale closure로 종목 변경 미반영되던 문제 — `stocksRef` 패턴으로 수정
+- fix: Stock 페이지 refreshPrices 의존성 순환 정리, priceLoaded 플래그로 "조회 중…" 표기
+- fix: Budget 확정 가드를 ref→state 전환해 버튼 비활성/스피너 UI 반영
+- feat: Settings 비밀번호 변경 기능 구현 (AuthContext에 updatePassword 추가)
+- refactor: 활성 유틸을 src/utils/formatters.js로 분리 (dummyData.js는 호환 re-export 유지)
+- refactor: schema.sql에 누락됐던 stocks.sort_order 컬럼 보강
+- chore: Dashboard 가계부 fetch에 최근 2년 dateFrom 필터 적용 (transactionService 시그니처 확장)
+- chore: Dashboard 잔액/부채 라벨이 기간 선택 시 "기간 순현금흐름/순부채 변동"으로 전환, 차트도 selectedPeriod 반영
+- chore: Layout 시작페이지 redirect 깜빡임 완화, vite UA 보강, yahooFinance 주석 갱신, Budget console 디버그 게이트화

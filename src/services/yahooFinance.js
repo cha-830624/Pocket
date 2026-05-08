@@ -132,7 +132,7 @@ export const fetchExchangeRate = async () => {
       const symbol = 'USDKRW=X'
       url = `${YAHOO_API_BASE}/v8/finance/chart/${symbol}?interval=1d&range=1d`
     } else {
-      // 프로덕션: Netlify Function
+      // 프로덕션: Vercel Function (api/yahoo-finance.js)
       url = `${YAHOO_API_BASE}?type=exchange`
     }
     

@@ -30,6 +30,10 @@ function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const hasRedirected = useRef(false)
+  // 첫 렌더에서 startPage가 '/'가 아닐 때 Dashboard가 잠시 보이는 깜빡임 방지
+  const [isResolvingStartPage, setIsResolvingStartPage] = useState(
+    location.pathname === '/' && settings.startPage && settings.startPage !== '/'
+  )
 
   const handleLogout = async () => {
     try {
@@ -46,6 +50,8 @@ function Layout() {
       hasRedirected.current = true
       navigate(settings.startPage, { replace: true })
     }
+    // 리다이렉트가 필요했다면 navigation 이후 게이트 해제
+    setIsResolvingStartPage(false)
   }, [settings.startPage, navigate, location.pathname])
 
   return (
@@ -100,9 +106,9 @@ function Layout() {
         />
       )}
 
-      {/* 메인 콘텐츠 */}
+      {/* 메인 콘텐츠 — 시작페이지 리다이렉트 진행 중에는 빈 영역 유지 (깜빡임 방지) */}
       <main className="main-content">
-        <Outlet />
+        {isResolvingStartPage ? null : <Outlet />}
       </main>
     </div>
   )

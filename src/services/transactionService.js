@@ -8,8 +8,9 @@ import { supabase } from '../lib/supabase'
  * 모든 거래 내역 조회
  * @param {string} type - 거래 유형 ('income' | 'fixed' | 'variable' | null)
  * @param {string} yearMonth - 년월 필터 (예: '2025-12')
+ * @param {string} dateFrom - 시작일 필터 (yearMonth 미지정 시 사용, YYYY-MM-DD)
  */
-export const getTransactions = async (type = null, yearMonth = null) => {
+export const getTransactions = async (type = null, yearMonth = null, dateFrom = null) => {
   try {
     let query = supabase
       .from('transactions')
@@ -25,8 +26,10 @@ export const getTransactions = async (type = null, yearMonth = null) => {
       const [year, month] = yearMonth.split('-').map(Number)
       const lastDay = new Date(year, month, 0).getDate()
       const endDate = `${yearMonth}-${String(lastDay).padStart(2, '0')}`
-      
+
       query = query.gte('date', startDate).lte('date', endDate)
+    } else if (dateFrom) {
+      query = query.gte('date', dateFrom)
     }
 
     const { data, error } = await query

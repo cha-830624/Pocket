@@ -158,11 +158,14 @@ export const importAllData = async (backupData, clearExisting = false) => {
     if (stocks && stocks.length > 0) {
       const stocksToInsert = stocks.map(s => ({
         market: s.market,
-        stock_name: s.stock_name,
-        stock_code: s.stock_code,
+        broker: s.broker,
+        name: s.name,
+        code: s.code,
         quantity: s.quantity,
         avg_price: s.avg_price,
-        currency: s.currency
+        currency: s.currency,
+        memo: s.memo || '',
+        sort_order: s.sort_order ?? null
       }))
       
       const { error } = await supabase.from('stocks').insert(stocksToInsert)

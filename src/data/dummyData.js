@@ -229,11 +229,8 @@ export const usStocks = [
   },
 ]
 
-// 환율
-export const exchangeRate = {
-  USDKRW: 1470.00,
-  lastUpdated: '2024-12-26 15:30'
-}
+// 환율 — formatters.js로 이동, 호환을 위해 re-export
+export { exchangeRate } from '../utils/formatters'
 
 // 월별 통계 데이터
 // monthlyStats는 Dashboard.jsx에서 실제 데이터 기반으로 동적 계산됨
@@ -250,76 +247,23 @@ export const debtHistory = [
 ]
 
 // 유틸리티 함수들
-export const formatCurrency = (amount, currency = 'KRW') => {
-  if (currency === 'USD') {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(amount)
-  }
-  return new Intl.NumberFormat('ko-KR', {
-    style: 'currency',
-    currency: 'KRW',
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
+// 활성 유틸은 src/utils/formatters.js로 이동했습니다.
+// 이 파일은 더미 시드 데이터만 보유합니다. 신규 코드는 formatters에서 직접 import 하세요.
+// 기존 import 호환을 위해 일부 유틸은 여기서 re-export 합니다.
+export {
+  formatCurrency,
+  formatPercent,
+  calculateStockProfit,
+  calculateTotalStockValue,
+  calculateTotalStockInvestment,
+} from '../utils/formatters'
 
-export const formatPercent = (value) => {
-  const sign = value >= 0 ? '+' : ''
-  return `${sign}${value.toFixed(2)}%`
-}
-
-// 계산 함수들
-export const calculateTotalIncome = () => {
-  return incomeData.reduce((sum, item) => sum + item.amount, 0)
-}
-
-export const calculateTotalFixedExpense = () => {
-  return fixedExpenseData.reduce((sum, item) => sum + item.amount, 0)
-}
-
-export const calculateTotalVariableExpense = () => {
-  return variableExpenseData.reduce((sum, item) => sum + item.amount, 0)
-}
-
-export const calculateTotalExpense = () => {
-  return calculateTotalFixedExpense() + calculateTotalVariableExpense()
-}
-
-export const calculateBalance = () => {
-  return calculateTotalIncome() - calculateTotalExpense()
-}
-
-export const calculateDebtBalance = () => {
-  return debtData.reduce((balance, item) => {
-    return item.type === 'borrow' ? balance + item.amount : balance - item.amount
-  }, 0)
-}
-
-export const calculateAssetBalance = () => {
-  return assetData.reduce((balance, item) => {
-    return item.type === 'deposit' ? balance + item.amount : balance - item.amount
-  }, 0)
-}
-
-export const calculateStockProfit = (stock) => {
-  const profit = (stock.currentPrice - stock.avgPrice) * stock.quantity
-  const profitRate = ((stock.currentPrice - stock.avgPrice) / stock.avgPrice) * 100
-  return { profit, profitRate }
-}
-
-export const calculateTotalStockValue = (stocks, exchangeRate = 1) => {
-  return stocks.reduce((total, stock) => {
-    const value = stock.currentPrice * stock.quantity
-    return total + (stock.currency === 'USD' ? value * exchangeRate : value)
-  }, 0)
-}
-
-export const calculateTotalStockInvestment = (stocks, exchangeRate = 1) => {
-  return stocks.reduce((total, stock) => {
-    const value = stock.avgPrice * stock.quantity
-    return total + (stock.currency === 'USD' ? value * exchangeRate : value)
-  }, 0)
-}
+// 더미 데이터 의존 계산 함수 — 마이그레이션 시드 외 사용 안 함
+export const calculateTotalIncome = () => incomeData.reduce((sum, item) => sum + item.amount, 0)
+export const calculateTotalFixedExpense = () => fixedExpenseData.reduce((sum, item) => sum + item.amount, 0)
+export const calculateTotalVariableExpense = () => variableExpenseData.reduce((sum, item) => sum + item.amount, 0)
+export const calculateTotalExpense = () => calculateTotalFixedExpense() + calculateTotalVariableExpense()
+export const calculateBalance = () => calculateTotalIncome() - calculateTotalExpense()
+export const calculateDebtBalance = () => debtData.reduce((b, i) => i.type === 'borrow' ? b + i.amount : b - i.amount, 0)
+export const calculateAssetBalance = () => assetData.reduce((b, i) => i.type === 'deposit' ? b + i.amount : b - i.amount, 0)
 

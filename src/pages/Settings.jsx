@@ -8,7 +8,7 @@ import { exportAllData, downloadBackup, importAllData, readBackupFile, getDataSt
 
 function Settings() {
   const { settings, updateSetting, toggleDarkMode } = useSettings()
-  const { user, signOut } = useAuth()
+  const { user, signOut, updatePassword } = useAuth()
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
   
@@ -114,6 +114,27 @@ function Settings() {
     updateSetting('budgetGoal', value)
   }
 
+  // 비밀번호 변경 핸들러 (간단한 prompt 기반 — 8자 이상)
+  const handlePasswordChange = async () => {
+    const newPassword = window.prompt('새 비밀번호를 입력하세요 (8자 이상):')
+    if (!newPassword) return
+    if (newPassword.length < 8) {
+      alert('비밀번호는 8자 이상이어야 합니다.')
+      return
+    }
+    const confirm = window.prompt('확인을 위해 새 비밀번호를 다시 입력하세요:')
+    if (newPassword !== confirm) {
+      alert('비밀번호가 일치하지 않습니다.')
+      return
+    }
+    try {
+      await updatePassword(newPassword)
+      alert('비밀번호가 변경되었습니다.')
+    } catch (err) {
+      alert('비밀번호 변경 실패: ' + err.message)
+    }
+  }
+
   // 토글 스위치 컴포넌트
   const Toggle = ({ isOn, onToggle }) => (
     <div 
@@ -182,7 +203,7 @@ function Settings() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn btn-secondary" style={{ flex: 1 }}>
+                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={handlePasswordChange}>
                   <Lock size={12} />
                   비밀번호 변경
                 </button>

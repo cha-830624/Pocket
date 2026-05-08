@@ -221,24 +221,28 @@ function Stock() {
     }
   }, [])
 
-  // 야후 파이낸스에서 현재가 조회
+  // 최신 종목 목록을 ref에 보관 (refreshPrices 의존성 순환 방지)
+  const stocksRef = useRef({ kr: [], us: [] })
+  useEffect(() => {
+    stocksRef.current = { kr: koreanStocks, us: usStocks }
+  }, [koreanStocks, usStocks])
+
+  // 야후 파이낸스에서 현재가 조회 (의존성 없이 ref에서 최신 종목 읽음)
   const refreshPrices = useCallback(async () => {
     setIsLoadingPrices(true)
     setPriceErrors([])
-    
+
     try {
-      // 모든 주식 현재가 조회
-      const allStocksToFetch = [...koreanStocks, ...usStocks]
+      const allStocksToFetch = [...stocksRef.current.kr, ...stocksRef.current.us]
       if (allStocksToFetch.length === 0) {
         setIsLoadingPrices(false)
         return
       }
       const results = await fetchMultipleStockPrices(allStocksToFetch)
-      
-      // 성공한 결과로 현재가 업데이트
+
       const priceMap = {}
       const errors = []
-      
+
       results.forEach(result => {
         if (result.success) {
           priceMap[result.stockId] = result.currentPrice
@@ -246,20 +250,20 @@ function Stock() {
           errors.push(`${result.originalStock?.name || result.symbol}: ${result.error}`)
         }
       })
-      
-      // 한국 주식 업데이트
+
+      // priceLoaded 플래그를 함께 set — 가격 fetch 성공 시 true
       setKoreanStocks(prev => prev.map(stock => ({
         ...stock,
-        currentPrice: priceMap[stock.id] ?? stock.currentPrice
+        currentPrice: priceMap[stock.id] ?? stock.currentPrice,
+        priceLoaded: priceMap[stock.id] !== undefined ? true : (stock.priceLoaded || false)
       })))
-      
-      // 미국 주식 업데이트
+
       setUsStocks(prev => prev.map(stock => ({
         ...stock,
-        currentPrice: priceMap[stock.id] ?? stock.currentPrice
+        currentPrice: priceMap[stock.id] ?? stock.currentPrice,
+        priceLoaded: priceMap[stock.id] !== undefined ? true : (stock.priceLoaded || false)
       })))
-      
-      // 환율 조회
+
       const rateResult = await fetchExchangeRate()
       if (rateResult.success) {
         setExchangeRate({
@@ -267,30 +271,31 @@ function Stock() {
           lastUpdated: new Date().toLocaleString('ko-KR')
         })
       }
-      
+
       setLastUpdated(new Date().toLocaleString('ko-KR'))
       if (errors.length > 0) {
         setPriceErrors(errors)
       }
-      
+
     } catch (error) {
       console.error('Error refreshing prices:', error)
       setPriceErrors([`가격 조회 실패: ${error.message}`])
     } finally {
       setIsLoadingPrices(false)
     }
-  }, [koreanStocks, usStocks])
-  
+  }, [])
+
   // 컴포넌트 마운트 시 Supabase에서 주식 목록 로드
   useEffect(() => {
     loadStocksFromDB()
   }, [loadStocksFromDB])
-  
+
   // 주식 목록 로드 완료 후 현재가 조회
   useEffect(() => {
     if (!isLoadingStocks && (koreanStocks.length > 0 || usStocks.length > 0)) {
       refreshPrices()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoadingStocks])
 
   // ESC 키로 팝업 닫기
@@ -415,10 +420,22 @@ function Stock() {
       alert('모든 항목을 입력해주세요.')
       return
     }
-    
-    setIsSaving(true)
+
     const avgPrice = parseFloat(formData.avgPrice) || 0
-    const quantity = parseFloat(formData.quantity) || 0
+    // 한국 주식은 정수 수량만 허용 (소수점 입력 시 차단)
+    const quantityRaw = parseFloat(formData.quantity) || 0
+    if (formData.market === 'KR' && !Number.isInteger(quantityRaw)) {
+      alert('한국 주식 수량은 정수만 입력할 수 있습니다.')
+      return
+    }
+    const quantity = formData.market === 'KR' ? Math.trunc(quantityRaw) : quantityRaw
+
+    if (avgPrice <= 0 || quantity <= 0) {
+      alert('매입가와 수량은 0보다 커야 합니다.')
+      return
+    }
+
+    setIsSaving(true)
     
     try {
       if (editMode === 'add') {
@@ -1025,7 +1042,9 @@ function Stock() {
                     <div className="stock-card-body">
                       <div className="stock-card-row">
                         <span className="stock-card-label">현재가</span>
-                        <span className="stock-card-value">{formatCurrency(stock.currentPrice, stock.currency)}</span>
+                        <span className="stock-card-value" style={{ color: stock.priceLoaded ? undefined : 'var(--text-muted)' }}>
+                          {stock.priceLoaded ? formatCurrency(stock.currentPrice, stock.currency) : '조회 중…'}
+                        </span>
                       </div>
                       <div className="stock-card-row">
                         <span className="stock-card-label">평단가</span>
@@ -1101,13 +1120,17 @@ function Stock() {
                       <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                         {formatCurrency(investmentAmount, stock.currency)}
                       </td>
-                      <td style={{ textAlign: 'center', fontWeight: '500' }}>
-                        {formatCurrency(stock.currentPrice, stock.currency)}
+                      <td style={{ textAlign: 'center', fontWeight: '500', color: stock.priceLoaded ? undefined : 'var(--text-muted)' }}>
+                        {stock.priceLoaded ? formatCurrency(stock.currentPrice, stock.currency) : '조회 중…'}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <div className={`amount ${profit >= 0 ? 'profit' : 'loss'}`}>
-                          {formatPercent(profitRate)}
-                        </div>
+                        {stock.priceLoaded ? (
+                          <div className={`amount ${profit >= 0 ? 'profit' : 'loss'}`}>
+                            {formatPercent(profitRate)}
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        )}
                       </td>
                     </tr>
                   )

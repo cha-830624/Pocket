@@ -49,11 +49,18 @@ export function AuthProvider({ children }) {
     if (error) throw error
   }
 
+  // 비밀번호 변경
+  const updatePassword = async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) throw error
+  }
+
   const value = {
     user,
     loading,
     signIn,
     signOut,
+    updatePassword,
   }
 
   return (

@@ -1,38 +1,57 @@
 // Vercel Function: 야후 파이낸스 API 프록시
 // CORS 문제를 해결하기 위한 서버리스 함수
 
+// 허용 origin 화이트리스트 (production + 프리뷰 + localhost)
+const ALLOWED_ORIGIN_PATTERNS = [
+  /^https:\/\/pocket-silk\.vercel\.app$/,
+  /^https:\/\/pocket-[a-z0-9-]+-cha-projects\.vercel\.app$/,
+  /^http:\/\/localhost:\d+$/,
+  /^http:\/\/127\.0\.0\.1:\d+$/,
+]
+
+// 야후 심볼 형식 검증 (영숫자, 점, 하이픈, 등호, 캐럿 — 약 15자 이내)
+const SYMBOL_PATTERN = /^[A-Za-z0-9.\-=^]{1,15}$/
+const ALLOWED_INTERVALS = new Set(['1m', '5m', '15m', '30m', '1h', '1d', '1wk', '1mo'])
+const ALLOWED_RANGES = new Set(['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'max'])
+
 export default async function handler(req, res) {
-  // CORS 헤더 설정
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  // CORS 헤더 — 허용된 origin만 통과
+  const origin = req.headers.origin || ''
+  const isAllowed = ALLOWED_ORIGIN_PATTERNS.some((re) => re.test(origin))
+  if (isAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
   res.setHeader('Content-Type', 'application/json')
 
-  // OPTIONS 요청 처리 (CORS preflight)
+  // OPTIONS preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end()
   }
 
   try {
-    // 쿼리 파라미터에서 심볼 및 옵션 가져오기
     const { symbol, type, interval, range } = req.query
 
-    if (!symbol && type !== 'exchange') {
-      return res.status(400).json({ error: 'Symbol is required' })
+    // 환율 모드는 symbol 불필요 — 그 외에는 symbol 형식 엄격 검증
+    if (type !== 'exchange') {
+      if (!symbol || typeof symbol !== 'string' || !SYMBOL_PATTERN.test(symbol)) {
+        return res.status(400).json({ error: 'Invalid symbol' })
+      }
     }
 
-    let url
-    if (type === 'exchange') {
-      // 환율 조회
-      url = `https://query1.finance.yahoo.com/v8/finance/chart/USDKRW=X?interval=1d&range=1d`
-    } else {
-      // 주식 가격 또는 차트 데이터 조회
-      const chartInterval = interval || '1d'
-      const chartRange = range || '1d'
-      url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=${chartInterval}&range=${chartRange}`
+    // interval/range 화이트리스트 검증 (미지정 시 기본값)
+    const chartInterval = interval || '1d'
+    const chartRange = range || '1d'
+    if (!ALLOWED_INTERVALS.has(chartInterval) || !ALLOWED_RANGES.has(chartRange)) {
+      return res.status(400).json({ error: 'Invalid interval or range' })
     }
 
-    console.log('Fetching URL:', url)
+    // URL 조립 — 검증된 값만 사용 (쿼리스트링은 URLSearchParams로 인코딩)
+    const params = new URLSearchParams({ interval: chartInterval, range: chartRange })
+    const targetSymbol = type === 'exchange' ? 'USDKRW=X' : symbol
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(targetSymbol)}?${params.toString()}`
 
     const response = await fetch(url, {
       headers: {
@@ -41,7 +60,6 @@ export default async function handler(req, res) {
     })
 
     if (!response.ok) {
-      console.log('Yahoo API error:', response.status, response.statusText)
       return res.status(response.status).json({ error: `Yahoo API error: ${response.status}` })
     }
 

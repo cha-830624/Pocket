@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS stocks (
   avg_price DECIMAL(15, 2) NOT NULL,
   currency VARCHAR(10) NOT NULL CHECK (currency IN ('KRW', 'USD')),
   memo TEXT,
+  sort_order INTEGER,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -111,12 +112,28 @@ ALTER TABLE debts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 
--- 모든 접근 허용 정책 (개인 사용 앱이므로 간소화)
-CREATE POLICY "Allow all access" ON transactions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access" ON assets FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access" ON debts FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access" ON stocks FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access" ON settings FOR ALL USING (true) WITH CHECK (true);
+-- 본인 데이터만 접근 가능 (auth.uid() 기반)
+-- 주의: 기존 DB에 "Allow all access" 정책이 있으면 먼저 DROP 후 적용
+--   DROP POLICY IF EXISTS "Allow all access" ON transactions;
+--   (assets/debts/stocks/settings 동일)
+
+CREATE POLICY "Users can manage own transactions" ON transactions
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can manage own assets" ON assets
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can manage own debts" ON debts
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can manage own stocks" ON stocks
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can manage own settings" ON settings
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- INSERT 시 user_id 자동 채움 (각 서비스에서 누락 시 보호)
+ALTER TABLE transactions ALTER COLUMN user_id SET DEFAULT auth.uid();
+ALTER TABLE assets ALTER COLUMN user_id SET DEFAULT auth.uid();
+ALTER TABLE debts ALTER COLUMN user_id SET DEFAULT auth.uid();
+ALTER TABLE stocks ALTER COLUMN user_id SET DEFAULT auth.uid();
+ALTER TABLE settings ALTER COLUMN user_id SET DEFAULT auth.uid();
 
 -- ==========================================
 -- updated_at 자동 갱신 트리거

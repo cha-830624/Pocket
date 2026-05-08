@@ -1,14 +1,14 @@
 # Supabase 설정
 # 이 내용을 복사해서 .env 파일을 만드세요!
 
-VITE_SUPABASE_URL=https://gzxbckioutctwxbevqmk.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6eGJja2lvdXRjdHd4YmV2cW1rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5OTI0MjMsImV4cCI6MjA4MjU2ODQyM30.yrX1eSDUxlNqipPR1RHXjrLqu2hvY8m11fhy7cihguU
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 
 # 사용 방법:
 # 1. 이 파일의 내용을 복사
-# 2. 프로젝트 루트(D:\work\Pocket)에 .env 파일 생성
-# 3. 복사한 내용 붙여넣기
+# 2. 프로젝트 루트(c:\work\Pocket)에 .env 파일 생성
+# 3. Supabase 대시보드 → Settings → API 에서 Project URL과 anon public key를 복사해 붙여넣기
 # 4. 저장!
 
-# 주의: .env 파일은 GitHub에 올라가지 않습니다! (.gitignore에 포함됨)
-
+# 주의: .env 파일은 GitHub에 올라가지 않습니다 (.gitignore에 포함됨)
+# 주의: 이 템플릿 파일에는 실제 키를 절대 넣지 마세요. placeholder만 유지하세요.

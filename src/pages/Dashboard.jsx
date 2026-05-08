@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { TrendingUp, TrendingDown, ArrowRight, Wallet, BarChart3, RefreshCw, Loader2 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import {
@@ -32,13 +32,17 @@ function Dashboard() {
   const [isLoadingPrices, setIsLoadingPrices] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
 
-  // Supabase에서 모든 데이터 로드
+  // Supabase에서 모든 데이터 로드 (가계부는 최근 2년치만 — 누적 부담 완화)
   useEffect(() => {
     const loadAllData = async () => {
       setIsLoadingData(true)
       try {
+        const twoYearsAgo = new Date()
+        twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2)
+        const dateFrom = twoYearsAgo.toISOString().slice(0, 10)
+
         const [txResult, assetResult, debtResult, stockResult] = await Promise.all([
-          getTransactions(),
+          getTransactions(null, null, dateFrom),
           getAssets(),
           getDebts(),
           getStocks()
@@ -61,11 +65,17 @@ function Dashboard() {
     loadAllData()
   }, [])
 
-  // 실시간 가격 조회
+  // 최신 종목 목록을 ref에 보관 (인터벌이 stale closure에 갇히지 않도록)
+  const stocksRef = useRef({ kr: [], us: [] })
+  useEffect(() => {
+    stocksRef.current = { kr: koreanStocks, us: usStocks }
+  }, [koreanStocks, usStocks])
+
+  // 실시간 가격 조회 (의존성 없이 ref에서 최신값 읽음)
   const refreshPrices = useCallback(async () => {
-    const allStocksToFetch = [...koreanStocks, ...usStocks]
+    const allStocksToFetch = [...stocksRef.current.kr, ...stocksRef.current.us]
     if (allStocksToFetch.length === 0) return
-    
+
     setIsLoadingPrices(true)
     try {
       const [priceResults, rateResult] = await Promise.all([
@@ -103,17 +113,17 @@ function Dashboard() {
     } finally {
       setIsLoadingPrices(false)
     }
-  }, [koreanStocks, usStocks])
+  }, [])
 
   // 주식 데이터 로드 완료 후 가격 조회 + 1분마다 자동 갱신
   useEffect(() => {
     if (isLoadingData) return
     if (koreanStocks.length === 0 && usStocks.length === 0) return
-    
+
     refreshPrices()
     const intervalId = setInterval(refreshPrices, 60000)
     return () => clearInterval(intervalId)
-  }, [isLoadingData])
+  }, [isLoadingData, koreanStocks.length, usStocks.length, refreshPrices])
 
   // 트랜잭션을 유형별로 분리
   const incomeData = useMemo(() => transactions.filter(t => t.type === 'income'), [transactions])
@@ -129,28 +139,25 @@ function Dashboard() {
   ]
   const years = [...new Set(allDates.map(date => date?.slice(0, 4)))].filter(Boolean).sort().reverse()
 
-  // 월별 통계 동적 계산
+  // 월별 통계 동적 계산 (selectedPeriod 반영)
   const monthlyStats = useMemo(() => {
+    const matchPeriod = (item) =>
+      selectedPeriod === 'all' || (item.date && item.date.startsWith(selectedPeriod))
+
     const monthMap = {}
-    
-    incomeData.forEach(item => {
-      if (!item.date) return
+
+    incomeData.filter(matchPeriod).forEach(item => {
       const yearMonth = item.date.slice(0, 7)
-      if (!monthMap[yearMonth]) {
-        monthMap[yearMonth] = { income: 0, expense: 0 }
-      }
+      if (!monthMap[yearMonth]) monthMap[yearMonth] = { income: 0, expense: 0 }
       monthMap[yearMonth].income += Number(item.amount)
     })
-    
-    ;[...fixedExpenseData, ...variableExpenseData].forEach(item => {
-      if (!item.date) return
+
+    ;[...fixedExpenseData, ...variableExpenseData].filter(matchPeriod).forEach(item => {
       const yearMonth = item.date.slice(0, 7)
-      if (!monthMap[yearMonth]) {
-        monthMap[yearMonth] = { income: 0, expense: 0 }
-      }
+      if (!monthMap[yearMonth]) monthMap[yearMonth] = { income: 0, expense: 0 }
       monthMap[yearMonth].expense += Number(item.amount)
     })
-    
+
     return Object.entries(monthMap)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([yearMonth, data]) => {
@@ -162,7 +169,7 @@ function Dashboard() {
           balance: data.income - data.expense
         }
       })
-  }, [incomeData, fixedExpenseData, variableExpenseData])
+  }, [incomeData, fixedExpenseData, variableExpenseData, selectedPeriod])
 
   // 데이터 필터링 함수
   const filterByPeriod = (data) => {
@@ -299,7 +306,7 @@ function Dashboard() {
         
         <div className="summary-cards" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
           <div className="summary-card primary">
-            <p className="summary-label">현금 잔액</p>
+            <p className="summary-label">{selectedPeriod === 'all' ? '현금 잔액' : '기간 순현금흐름'}</p>
             <p className="summary-value">{formatCurrency(cashBalance)}</p>
             <div className={`summary-change ${cashBalance >= 0 ? 'positive' : 'negative'}`}>
               {cashBalance >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
@@ -321,7 +328,7 @@ function Dashboard() {
             </p>
           </div>
           <div className="summary-card">
-            <p className="summary-label">부채 잔액</p>
+            <p className="summary-label">{selectedPeriod === 'all' ? '부채 잔액' : '기간 순부채 변동'}</p>
             <p className="summary-value amount expense">{formatCurrency(Math.abs(debtBalance))}</p>
             <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>
               상환률 {repaymentRate.toFixed(0)}%
@@ -482,8 +489,8 @@ function Dashboard() {
               {recentExpenses.length > 0 ? (
                 <table className="data-table">
                   <tbody>
-                    {recentExpenses.map((item, idx) => (
-                      <tr key={idx}>
+                    {recentExpenses.map((item) => (
+                      <tr key={item.id}>
                         <td>{item.name}</td>
                         <td style={{ textAlign: 'right' }}>
                           <span className="amount expense">-{formatCurrency(item.amount)}</span>
