@@ -17,13 +17,16 @@ function Asset() {
   // 팝업 state
   const [showModal, setShowModal] = useState(false)
   const [editingItem, setEditingItem] = useState(null) // null이면 추가, 값이 있으면 수정
-  const [formData, setFormData] = useState({
-    year: new Date().getFullYear(),
-    month: new Date().getMonth() + 1,
-    day: '1',
-    type: 'deposit',
-    amount: '',
-    description: ''
+  const [formData, setFormData] = useState(() => {
+    const today = new Date()
+    return {
+      year: today.getFullYear(),
+      month: today.getMonth() + 1,
+      day: today.getDate().toString(),
+      type: 'deposit',
+      amount: '',
+      description: ''
+    }
   })
   
   // 데이터 state
@@ -150,10 +153,11 @@ function Asset() {
   // 추가 팝업 열기
   const openAddModal = () => {
     setEditingItem(null)
+    const today = new Date()
     setFormData({
-      year: new Date().getFullYear(),
-      month: new Date().getMonth() + 1,
-      day: '1',
+      year: today.getFullYear(),
+      month: today.getMonth() + 1,
+      day: today.getDate().toString(),
       type: 'deposit',
       amount: '',
       description: ''

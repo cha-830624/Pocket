@@ -64,6 +64,11 @@
 - docs: CLAUDE.md 신규 작성, Git 작업 규칙(명시 요청 시에만 커밋·푸시, 커밋 시 History.md 갱신) 추가
 - docs: docs/History.md 신설, 과거 개발 이력 요약 정리
 
+### 2026-05-08 (2)
+- feat: 가계부/자산관리/부채관리 항목 추가 시 날짜 기본값을 오늘 날짜로 변경 (Budget은 다른 달 보기 중이면 그 달 마지막 날로 클램프)
+- chore: Asset/Debt 초기 useState도 lazy 초기화로 정리해 openAddModal과 일관성 맞춤
+- docs: CLAUDE.md에 Supabase Data API 변경(2026-10-30 시한) 알림 섹션 추가
+
 ### 2026-05-08
 - security: Supabase RLS 정책을 `auth.uid() = user_id` 기반으로 강화, user_id DEFAULT 추가
 - security: env-template.txt의 실제 Supabase URL·anon key를 placeholder로 교체

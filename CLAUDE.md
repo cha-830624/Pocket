@@ -75,3 +75,24 @@ DDL은 [supabase/schema.sql](supabase/schema.sql) (RLS 포함, 운영용)과 [su
 
 - 상세한 페이지·서비스별 기능 설명은 [project-structure.md](project-structure.md)를 참고. 일부 정보는 시간이 지나면서 어긋날 수 있으니 코드와 충돌 시 코드를 우선합니다.
 - 제품 요구사항은 [prd.md](prd.md), 환경 설정 체크리스트는 [home.md](home.md).
+
+## 예정된 마이그레이션 / 알림
+
+### Supabase Data API 기본 동작 변경 (2026-10-30 기존 프로젝트 적용)
+2026-05-08 Supabase 공지 메일 수신. 핵심 내용:
+- **2026-05-30**: 신규 Supabase 프로젝트에서 `public` 스키마 테이블이 Data API에 자동 노출되지 않음. 명시적 `GRANT` 필요.
+- **2026-10-30**: 기존 프로젝트(=Pocket 포함)에도 적용. 단 **기존 테이블은 현재 grant를 유지** → 동작에 즉시 지장 없음.
+
+**현재 영향**: 없음. Pocket의 transactions/assets/debts/stocks/settings 5개 테이블은 그대로 동작.
+
+**대비 작업 (2026-10-30 전까지, 우선순위 낮음)**:
+[supabase/schema.sql](supabase/schema.sql)에 명시적 GRANT 추가. 새 테이블을 추가할 때도 같은 패턴 사용:
+```sql
+GRANT SELECT, INSERT, UPDATE, DELETE ON <table_name> TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON <table_name> TO service_role;
+-- 익명 접근이 필요하면 anon에도 SELECT만 부여 (Pocket은 인증 필수라 anon 불필요)
+```
+
+**증상**: GRANT 누락 시 PostgREST가 `42501` 에러와 함께 정확한 GRANT 문을 응답으로 돌려줌. 그때 보고 추가해도 됨.
+
+**참고**: Supabase Dashboard → Security Advisor 에서 기존 테이블 상태 점검 가능.

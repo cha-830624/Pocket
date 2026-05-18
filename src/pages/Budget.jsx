@@ -406,7 +406,11 @@ function Budget() {
 
   // 추가 모달 열기
   const openAddModal = (type) => {
-    setFormData({ day: '1', name: '', amount: '', memo: '' })
+    // 기본 일자 = 오늘. 단, 다른 달을 보고 있으면 해당 달의 마지막 날로 클램프
+    const today = new Date()
+    const lastDayOfViewingMonth = new Date(currentYear, currentMonthNum, 0).getDate()
+    const defaultDay = Math.min(today.getDate(), lastDayOfViewingMonth)
+    setFormData({ day: defaultDay.toString(), name: '', amount: '', memo: '' })
     setEditModal({ type, item: null, isNew: true })
   }
 
