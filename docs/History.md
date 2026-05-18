@@ -59,6 +59,13 @@
 ### 2026-04-02
 - refactor: 자산/부채 차트를 그라디언트 영역 차트로 통일, 요약 제거
 
+### 2026-05-18
+- chore: Vercel ↔ GitHub 자동 배포 재연결 (저장소 이전 후 Vercel이 옛 repo를 가리키던 문제 해결)
+  - GitHub: cha-830624 계정에 Vercel App 설치 + Pocket 저장소 권한 부여
+  - Vercel: nocarrot83-4521 계정의 GitHub Sign-in을 cha-830624로 갱신
+  - Vercel CLI(`vercel link` + `vercel --prod`)로 우선 수동 배포 후, UI에서 git 자동 연동 복구
+- chore: .gitignore에 .vercel 디렉터리 추가 (Vercel CLI가 자동 생성)
+
 ### 2026-05-07
 - chore: GitHub 저장소 URL 변경 (`chajunghun83/Pocket` → `cha-830624/Pocket`), 문서·git remote 갱신
 - docs: CLAUDE.md 신규 작성, Git 작업 규칙(명시 요청 시에만 커밋·푸시, 커밋 시 History.md 갱신) 추가
