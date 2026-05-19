@@ -60,6 +60,7 @@
 - refactor: 자산/부채 차트를 그라디언트 영역 차트로 통일, 요약 제거
 
 ### 2026-05-18
+- fix: 가계부 페이지 모바일 헤더 레이아웃 — 타이틀/DB 뱃지와 월 선택·확정 버튼이 좁은 화면에서 한 줄에 끼어 어색하던 문제 수정 (`.budget-page-header` 클래스로 한정 적용, 다른 페이지 영향 없음)
 - chore: Vercel ↔ GitHub 자동 배포 재연결 (저장소 이전 후 Vercel이 옛 repo를 가리키던 문제 해결)
   - GitHub: cha-830624 계정에 Vercel App 설치 + Pocket 저장소 권한 부여
   - Vercel: nocarrot83-4521 계정의 GitHub Sign-in을 cha-830624로 갱신

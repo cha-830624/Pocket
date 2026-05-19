@@ -1096,9 +1096,20 @@ button {
   .page-header {
     margin-bottom: 12px;
   }
-  
+
   .page-title {
     font-size: 1.1rem;
+  }
+
+  /* 가계부 헤더 전용 — 모바일에선 세로 스택 + 부제 줄바꿈 */
+  .budget-page-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px;
+  }
+
+  .budget-page-header .page-subtitle {
+    flex-wrap: wrap;
   }
   
   /* 가계부 3열 → 1열 (세로 스택) */
@@ -1231,9 +1242,17 @@ button {
     font-size: 0.7rem;
   }
   
-  /* 월 선택 */
+  /* 월 선택 — 모바일에선 헤더 아래 줄에 균등 배치 */
   .month-selector {
     flex-wrap: wrap;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  /* 월 선택 안의 확정 버튼이 줄바꿈되면 폭 100% 차지 */
+  .month-selector .confirm-month-btn {
+    margin-left: 0 !important;
+    flex: 1 1 auto;
     justify-content: center;
   }
   

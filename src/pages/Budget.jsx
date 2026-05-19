@@ -675,7 +675,7 @@ function Budget() {
   return (
     <div className="fade-in page-container">
       {/* 헤더 */}
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header budget-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="page-title">가계부</h1>
           <p className="page-subtitle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
