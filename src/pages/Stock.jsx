@@ -73,13 +73,19 @@ const BROKERS = {
     color: '#8B5CF6',
     bgColor: '#EDE9FE',
   },
+  pension: {
+    name: '연금',
+    icon: '🏛️',
+    color: '#F59E0B',
+    bgColor: '#FEF3C7',
+  },
 }
 
 
 
 function Stock() {
   const { settings } = useSettings()
-  const [activeTab, setActiveTab] = useState('namu') // 증권사별 탭: namu, isa, toss
+  const [activeTab, setActiveTab] = useState('namu') // 증권사별 탭: namu, isa, toss, pension
   const [hoveredStock, setHoveredStock] = useState(null)
   const [selectedStock, setSelectedStock] = useState(null)
   const [chartData, setChartData] = useState([])
@@ -314,10 +320,11 @@ function Stock() {
     const brokerNames = {
       namu: '🌳 나무증권',
       isa: '🏦 ISA',
-      toss: '💙 토스'
+      toss: '💙 토스',
+      pension: '🏛️ 연금'
     }
-    
-    const brokerOrder = ['namu', 'isa', 'toss']
+
+    const brokerOrder = ['namu', 'isa', 'toss', 'pension']
     const today = new Date().toISOString().split('T')[0]
     
     let mdContent = `# 주식 포트폴리오\n\n`
@@ -808,6 +815,7 @@ function Stock() {
           <button className={`tab ${activeTab === 'namu' ? 'active' : ''}`} onClick={() => setActiveTab('namu')}>🌳 나무</button>
           <button className={`tab ${activeTab === 'isa' ? 'active' : ''}`} onClick={() => setActiveTab('isa')}>🏦 ISA</button>
           <button className={`tab ${activeTab === 'toss' ? 'active' : ''}`} onClick={() => setActiveTab('toss')}>💙 토스</button>
+          <button className={`tab ${activeTab === 'pension' ? 'active' : ''}`} onClick={() => setActiveTab('pension')}>🏛️ 연금</button>
         </div>
         <div className="stock-exchange-info">
           <span className="exchange-rate">₩{exchangeRate.USDKRW.toLocaleString()}/USD</span>

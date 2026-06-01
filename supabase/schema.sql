@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS stocks (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   market VARCHAR(10) NOT NULL CHECK (market IN ('KR', 'US')),
-  broker VARCHAR(20) NOT NULL CHECK (broker IN ('namu', 'toss', 'isa')),
+  broker VARCHAR(20) NOT NULL CHECK (broker IN ('namu', 'toss', 'isa', 'pension')),
   name VARCHAR(100) NOT NULL,
   code VARCHAR(20) NOT NULL,
   quantity DECIMAL(15, 4) NOT NULL,
