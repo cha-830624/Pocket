@@ -1,26 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 // 진단 로그 토글 (디버그 시 true로)
 const DEBUG_BUDGET = false
-import { ChevronLeft, ChevronRight, Check, Target, X, Plus, Trash2, Loader2, Database } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check, ArrowRightLeft, X, Plus, Trash2, Loader2, Database } from 'lucide-react'
 import {
   incomeData as initialIncomeData,
   fixedExpenseData as initialFixedData,
   variableExpenseData as initialVariableData,
   formatCurrency,
 } from '../data/dummyData'
-import { useSettings } from '../context/SettingsContext'
 import {
   getTransactions,
   addTransaction,
   updateTransaction,
   deleteTransaction,
   toggleCompleted as toggleCompletedDB,
+  updateCheckState as updateCheckStateDB,
   migrateTransactions,
 } from '../services/transactionService'
 
 function Budget() {
-  const { settings } = useSettings()
-  
   // 데이터 state
   const [incomeList, setIncomeList] = useState([])
   const [fixedList, setFixedList] = useState([])
@@ -111,6 +109,8 @@ function Budget() {
     amount: Number(item.amount),
     date: item.date,
     completed: item.is_completed,
+    // 지출 3단계 체크 상태(0/1/2). 구버전 데이터는 is_completed 기준으로 환산
+    checkState: item.check_state ?? (item.is_completed ? 2 : 0),
     memo: item.memo || ''
   })
 
@@ -178,7 +178,36 @@ function Budget() {
       }
     }
   }
-  
+
+  // 지출 체크 상태 3단계 순환 토글: 0(없음) → 1(이체완료) → 2(결제완료) → 0
+  const handleCycleCheckState = async (type, id, e) => {
+    e.stopPropagation() // 더블클릭(수정) 이벤트 방지
+
+    const list = type === 'fixed' ? fixedList : variableList
+    const item = list.find(i => i.id === id)
+    if (!item) return
+
+    const prevState = item.checkState ?? 0
+    const newState = (prevState + 1) % 3
+
+    // 낙관적 업데이트 (UI 먼저 변경)
+    const updateList = (items) => items.map(i => i.id === id ? { ...i, checkState: newState } : i)
+    if (type === 'fixed') setFixedList(updateList)
+    else setVariableList(updateList)
+
+    // Supabase 업데이트
+    if (useSupabase) {
+      const { error } = await updateCheckStateDB(id, newState)
+      if (error) {
+        console.error('체크 상태 변경 실패:', error)
+        // 실패 시 롤백
+        const rollback = (items) => items.map(i => i.id === id ? { ...i, checkState: prevState } : i)
+        if (type === 'fixed') setFixedList(rollback)
+        else setVariableList(rollback)
+      }
+    }
+  }
+
   // 특정 월의 데이터 존재 여부 확인
   const hasDataForMonth = (year, month) => {
     const monthKey = `${year}-${String(month).padStart(2, '0')}`
@@ -312,7 +341,7 @@ function Budget() {
         if (!error && data) newFixedItems.push(transformData(data))
       } else {
         const newId = Math.max(...fixedList.map(i => typeof i.id === 'number' ? i.id : 0), 0) + newFixedItems.length + 1
-        newFixedItems.push({ id: newId, ...newData, completed: false })
+        newFixedItems.push({ id: newId, ...newData, completed: false, checkState: 0 })
       }
     }
     
@@ -332,7 +361,7 @@ function Budget() {
         if (!error && data) newVariableItems.push(transformData(data))
       } else {
         const newId = Math.max(...variableList.map(i => typeof i.id === 'number' ? i.id : 0), 0) + newVariableItems.length + 1
-        newVariableItems.push({ id: newId, ...newData, completed: false })
+        newVariableItems.push({ id: newId, ...newData, completed: false, checkState: 0 })
       }
     }
     
@@ -473,6 +502,7 @@ function Budget() {
             amount,
             date: fullDate,
             completed: false,
+            checkState: 0,
             memo: formData.memo
           }
           
@@ -576,18 +606,20 @@ function Budget() {
     }
   }
   
-  // 예산 목표 계산
+  // 지출 합계
   const totalExpense = totalFixed + totalVariable
-  const budgetGoal = settings.budgetGoal
-  const budgetProgress = Math.min((totalExpense / budgetGoal) * 100, 100)
-  const budgetRemaining = budgetGoal - totalExpense
-  const isOverBudget = totalExpense > budgetGoal
 
   // 체크되지 않은 항목 금액 합계 (미처리 금액)
+  // 수입: is_completed 기준(기존 유지) / 지출: check_state 기준(0=미확인, 1=이체완료, 2=결제완료)
   const uncheckedIncome = filteredIncome.filter(i => !i.completed).reduce((sum, item) => sum + item.amount, 0)
-  const uncheckedFixed = filteredFixed.filter(i => !i.completed).reduce((sum, item) => sum + item.amount, 0)
-  const uncheckedVariable = filteredVariable.filter(i => !i.completed).reduce((sum, item) => sum + item.amount, 0)
-  const uncheckedExpense = uncheckedFixed + uncheckedVariable // 미확인 지출 총합
+  const uncheckedFixed = filteredFixed.filter(i => (i.checkState ?? 0) === 0).reduce((sum, item) => sum + item.amount, 0)
+  const uncheckedVariable = filteredVariable.filter(i => (i.checkState ?? 0) === 0).reduce((sum, item) => sum + item.amount, 0)
+  const uncheckedExpense = uncheckedFixed + uncheckedVariable // 미확인 지출 총합 (아직 손 안 댄 것)
+
+  // 이체완료(세모) 지출 금액 합계 — 돈은 출금 통장으로 옮겼으나 아직 결제 전
+  const transferredFixed = filteredFixed.filter(i => (i.checkState ?? 0) === 1).reduce((sum, item) => sum + item.amount, 0)
+  const transferredVariable = filteredVariable.filter(i => (i.checkState ?? 0) === 1).reduce((sum, item) => sum + item.amount, 0)
+  const transferredExpense = transferredFixed + transferredVariable // 이체완료 지출 총합
 
   // 날짜 포맷 (MM/DD)
   const formatDate = (dateStr) => {
@@ -627,13 +659,26 @@ function Budget() {
               title="더블클릭하여 수정"
             >
               <td>
-                <div 
-                  className={`checkbox ${item.completed ? 'checked' : ''}`}
-                  onClick={(e) => handleToggleCompleted(type, item.id, e)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {item.completed && <Check size={9} />}
-                </div>
+                {isIncome ? (
+                  // 수입: 기존 on/off 체크박스
+                  <div
+                    className={`checkbox ${item.completed ? 'checked' : ''}`}
+                    onClick={(e) => handleToggleCompleted(type, item.id, e)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {item.completed && <Check size={9} />}
+                  </div>
+                ) : (
+                  // 지출: 3단계 순환 (없음 → 이체완료 → 결제완료)
+                  <div
+                    className={`checkbox ${item.checkState === 2 ? 'checked' : item.checkState === 1 ? 'transferred' : ''}`}
+                    onClick={(e) => handleCycleCheckState(type, item.id, e)}
+                    style={{ cursor: 'pointer' }}
+                    title={item.checkState === 1 ? '이체완료 (한 번 더 누르면 결제완료)' : item.checkState === 2 ? '결제완료 (한 번 더 누르면 해제)' : '한 번 누르면 이체완료'}
+                  >
+                    {item.checkState === 2 ? <Check size={9} /> : item.checkState === 1 ? <ArrowRightLeft size={9} /> : null}
+                  </div>
+                )}
               </td>
               <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                 {formatDate(item.date)}
@@ -741,7 +786,7 @@ function Budget() {
       </div>
 
       {/* 요약 카드 */}
-      <div className="summary-cards" style={{ gridTemplateColumns: settings.useBudgetGoal ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)' }}>
+      <div className="summary-cards" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
         <div className="summary-card primary">
           <p className="summary-label">잔액</p>
           <p className="summary-value">{formatCurrency(balance)}</p>
@@ -755,42 +800,13 @@ function Budget() {
           <p className="summary-value amount expense">{formatCurrency(totalExpense)}</p>
         </div>
         <div className="summary-card">
+          <p className="summary-label" style={{ color: 'var(--accent)' }}>이체완료</p>
+          <p className="summary-value" style={{ color: 'var(--accent)' }}>{formatCurrency(transferredExpense)}</p>
+        </div>
+        <div className="summary-card">
           <p className="summary-label" style={{ color: 'var(--warning)' }}>지출 (미확인)</p>
           <p className="summary-value" style={{ color: 'var(--warning)' }}>{formatCurrency(uncheckedExpense)}</p>
         </div>
-        {settings.useBudgetGoal && (
-          <div className="summary-card">
-            <p className="summary-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Target size={12} />
-              예산 목표
-            </p>
-            <p className="summary-value" style={{ 
-              color: isOverBudget ? 'var(--expense)' : 'var(--income)',
-              fontSize: '0.9rem'
-            }}>
-              {isOverBudget ? '초과 ' : '남은 '}{formatCurrency(Math.abs(budgetRemaining))}
-            </p>
-            <div style={{ marginTop: '6px' }}>
-              <div className="progress-bar">
-                <div 
-                  className={`progress-fill ${isOverBudget ? 'expense' : 'accent'}`} 
-                  style={{ 
-                    width: `${budgetProgress}%`,
-                    background: isOverBudget ? 'var(--expense)' : 'var(--accent)'
-                  }} 
-                />
-              </div>
-              <p style={{ 
-                fontSize: '0.6rem', 
-                color: 'var(--text-muted)', 
-                marginTop: '2px',
-                textAlign: 'right'
-              }}>
-                {formatCurrency(totalExpense)} / {formatCurrency(budgetGoal)}
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 3열 그리드: 수입 / 고정지출 / 변동지출 */}

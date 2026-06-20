@@ -118,6 +118,7 @@ export const importAllData = async (backupData, clearExisting = false) => {
         amount: t.amount,
         date: t.date,
         is_completed: t.is_completed,
+        check_state: t.check_state ?? (t.is_completed ? 2 : 0), // 구버전 백업 호환
         memo: t.memo || ''
       }))
       

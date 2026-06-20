@@ -519,6 +519,13 @@ button {
   color: white;
 }
 
+/* 이체완료(1단계): 연한 인디고로 '진행 중' 단계감 표현. 결제완료(checked)는 진한 인디고 */
+.checkbox.transferred {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* 버튼 */
 .btn {
   display: inline-flex;

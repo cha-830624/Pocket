@@ -77,6 +77,7 @@ export const addTransaction = async (transaction) => {
         amount: transaction.amount,
         date: transaction.date,
         is_completed: transaction.is_completed || false,
+        check_state: transaction.check_state ?? 0, // 0:없음 1:이체완료 2:결제완료
         memo: transaction.memo || ''
       }])
       .select()
@@ -97,15 +98,19 @@ export const addTransaction = async (transaction) => {
  */
 export const updateTransaction = async (id, updates) => {
   try {
+    // 수정할 필드만 담는다. check_state는 전달된 경우에만 갱신(미전달 시 기존 값 유지)
+    const payload = {
+      name: updates.name,
+      amount: updates.amount,
+      date: updates.date,
+      is_completed: updates.is_completed,
+      memo: updates.memo
+    }
+    if (updates.check_state !== undefined) payload.check_state = updates.check_state
+
     const { data, error } = await supabase
       .from('transactions')
-      .update({
-        name: updates.name,
-        amount: updates.amount,
-        date: updates.date,
-        is_completed: updates.is_completed,
-        memo: updates.memo
-      })
+      .update(payload)
       .eq('id', id)
       .select()
       .single()
@@ -136,6 +141,28 @@ export const toggleCompleted = async (id, isCompleted) => {
     return { data, error: null }
   } catch (error) {
     console.error('완료 상태 변경 실패:', error)
+    return { data: null, error }
+  }
+}
+
+/**
+ * 지출 체크 상태 변경 (3단계: 0=없음, 1=이체완료, 2=결제완료)
+ * @param {string} id - 거래 ID
+ * @param {number} checkState - 체크 상태 (0/1/2)
+ */
+export const updateCheckState = async (id, checkState) => {
+  try {
+    const { data, error } = await supabase
+      .from('transactions')
+      .update({ check_state: checkState })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error('체크 상태 변경 실패:', error)
     return { data: null, error }
   }
 }

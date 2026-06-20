@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   amount DECIMAL(15, 0) NOT NULL DEFAULT 0,
   date DATE NOT NULL,
   is_completed BOOLEAN DEFAULT FALSE,
+  check_state SMALLINT NOT NULL DEFAULT 0, -- 지출 3단계 체크: 0=없음, 1=이체완료, 2=결제완료
   memo TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -22,6 +23,10 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
 CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
+
+-- 기존 프로젝트 마이그레이션: check_state 컬럼이 없으면 추가하고, 기존 완료 항목을 결제완료(2)로 이전
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS check_state SMALLINT NOT NULL DEFAULT 0;
+UPDATE transactions SET check_state = 2 WHERE is_completed = TRUE AND check_state = 0;
 
 -- ==========================================
 -- 2. 자산 관리 테이블 (assets)

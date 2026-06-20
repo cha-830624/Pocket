@@ -59,6 +59,12 @@
 ### 2026-04-02
 - refactor: 자산/부채 차트를 그라디언트 영역 차트로 통일, 요약 제거
 
+### 2026-06-20
+- feat: 가계부 지출(고정/변동) 체크박스를 2단계(3-state)로 확장 — 없음 → 이체완료(이체 아이콘, 연한 인디고) → 결제완료(체크, 진한 인디고) 순환 클릭. 출금 통장 이체와 실제 결제를 구분해 표시 (수입은 기존 on/off 유지)
+- feat: 상단 요약에 "이체완료" 카드 추가(지출 미확인 카드 왼쪽). 미확인 지출은 `check_state=0` 항목만, 이체완료는 `check_state=1` 항목만 집계
+- chore: `transactions` 테이블에 `check_state`(SMALLINT 0/1/2) 컬럼 추가 + 마이그레이션(기존 `is_completed=true` → 2). 운영 DB는 사용자가 ALTER 적용 완료. transactionService(`updateCheckState`)·backupService에 반영
+- style: 가계부 상단 "예산 목표" 카드 제거(요약 카드 5개로 정리), 카드 전용 죽은 코드 정리(`useSettings`/예산 변수/`Target` 아이콘)
+
 ### 2026-05-18 (2)
 - feat: 주식 페이지에 "연금" 증권사 탭 추가 (🏛️ 아이콘, 앰버색 #F59E0B, 토스 오른쪽 배치)
 - chore: supabase/schema.sql broker CHECK 제약에 'pension' 추가 (운영 DB는 사용자가 ALTER 적용 완료)
