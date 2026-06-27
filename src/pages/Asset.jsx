@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Plus, ArrowUpCircle, ArrowDownCircle, X, Edit3, Trash2, Loader2, Database } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer } from 'recharts'
+import { appendWeeklyPoints } from '../utils/formatters'
+import { useChartPan } from '../utils/useChartPan'
 import {
   assetData as initialAssetData,
   formatCurrency,
@@ -126,21 +128,27 @@ function Asset() {
   const totalWithdrawn = dataList.filter(d => d.type === 'withdraw').reduce((sum, d) => sum + d.amount, 0)
   const savingsRate = totalDeposited > 0 ? ((currentBalance / totalDeposited) * 100) : 0
 
-  // 잔액 추이 차트 데이터 (일별, 최근 20건)
+  // 잔액 추이 차트 데이터 — 거래 누적 + 마지막 거래 이후 주간(일요일)·오늘 보간
   const chartData = useMemo(() => {
     const sorted = [...dataList].sort((a, b) => a.date.localeCompare(b.date))
     let runningBalance = 0
-    
-    const all = sorted.map(item => {
+
+    const points = sorted.map(item => {
       runningBalance += (item.type === 'deposit' ? item.amount : -item.amount)
       return {
-        date: item.date.slice(5).replace('-', '/'),
-        balance: runningBalance
+        fullDate: item.date,                       // 'YYYY-MM-DD' (보간 계산용)
+        date: item.date.slice(5).replace('-', '/'), // 'MM/DD' (축 라벨)
+        balance: runningBalance,
+        isFilled: false,                            // 실제 거래 포인트
       }
     })
-    
-    return all.slice(-20)
+
+    return appendWeeklyPoints(points)
   }, [dataList])
+
+  // 드래그로 좌우 이동할 표시 구간(기본: 최근 20개)
+  const pan = useChartPan(chartData.length, 20)
+  const visibleData = chartData.slice(pan.sliceStart, pan.sliceEnd)
 
   // 금액 축약 포맷
   const formatShort = (value) => {
@@ -365,13 +373,17 @@ function Asset() {
           <div className="card-header">
             <h3 className="card-title">자산 잔액 추이</h3>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-              최근 {chartData.length}건
+              전체 {dataList.length}건 · 드래그로 과거 보기
             </span>
           </div>
           <div className="card-body" style={{ padding: '8px 12px' }}>
-            <div style={{ height: '220px' }}>
+            <div
+              ref={pan.containerRef}
+              style={{ height: '220px', cursor: pan.canPan ? 'grab' : 'default', touchAction: 'pan-y', userSelect: 'none' }}
+              {...pan.handlers}
+            >
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                <AreaChart data={visibleData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="assetGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#10B981" stopOpacity={0.4}/>
@@ -392,11 +404,11 @@ function Asset() {
                     tickFormatter={formatShort}
                     width={50}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="balance" 
-                    stroke="#10B981" 
-                    strokeWidth={2.5} 
+                  <Area
+                    type="monotone"
+                    dataKey="balance"
+                    stroke="#10B981"
+                    strokeWidth={2.5}
                     fill="url(#assetGradient)"
                     dot={{ r: 4, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }}
                     activeDot={{ r: 6, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }}
